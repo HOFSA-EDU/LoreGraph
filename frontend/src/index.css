@@ -1,0 +1,56 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Dark-first fantasy palette. Single theme; light mode is intentionally not
+   provided for the MVP. */
+@layer base {
+  :root,
+  .dark {
+    --background: 230 18% 8%;
+    --foreground: 35 25% 90%;
+
+    --card: 230 18% 11%;
+    --card-foreground: 35 25% 90%;
+
+    --muted: 230 12% 18%;
+    --muted-foreground: 35 12% 65%;
+
+    --primary: 35 70% 55%;
+    --primary-foreground: 230 25% 10%;
+
+    --secondary: 230 14% 18%;
+    --secondary-foreground: 35 25% 90%;
+
+    --accent: 260 40% 45%;
+    --accent-foreground: 35 25% 95%;
+
+    --destructive: 0 60% 45%;
+    --destructive-foreground: 35 25% 95%;
+
+    --border: 230 10% 22%;
+    --input: 230 10% 22%;
+    --ring: 35 70% 55%;
+    --radius: 0.65rem;
+  }
+
+  * {
+    border-color: hsl(var(--border));
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  }
+}
+
+/* React Flow background tweak so it blends with the dark theme */
+.react-flow__background {
+  background-color: hsl(var(--background));
+}
+.react-flow__node {
+  font-family: inherit;
+}
+.react-flow__edge-text {
+  fill: hsl(var(--foreground));
+  font-size: 11px;
+}
