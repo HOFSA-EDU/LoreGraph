@@ -57,6 +57,8 @@ export interface Entity {
   importance: Importance;
   sourceExcerpt: string | null;
   imagePrompt: string | null;
+  imageUrl: string | null;
+  imageGeneratedAt: string | null;
   isUncertain: boolean;
   createdAt: string;
   updatedAt: string;

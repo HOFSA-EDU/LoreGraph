@@ -28,6 +28,10 @@ coverage/
 *.sqlite3
 backend/prisma/migrations/dev.db*
 
+# ---------- Generierte Uploads (Bilder) ----------
+backend/uploads/*
+!backend/uploads/.gitkeep
+
 # ---------- Editor / OS ----------
 .vscode/
 .idea/

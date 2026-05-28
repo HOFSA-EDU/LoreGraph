@@ -196,6 +196,8 @@ ausschließlich in deine lokale `.env`.
 | GET | `/api/campaigns/:id/session-prep` |
 | GET | `/api/campaigns/:id/export` |
 | POST | `/api/campaigns/import` |
+| POST | `/api/images/generate` — generiert ein Bild für eine Entität aus deren Prompt |
+| GET | `/uploads/...` — statische Auslieferung der generierten Bilder |
 
 ### Analyze-Request
 
@@ -298,6 +300,28 @@ Die Auswahl läuft über die Factory in [backend/src/analyzers/index.ts](backend
 - Das Frontend prüft `GET /api/analyzer/status` und entsperrt die LLM-Option im Dropdown automatisch.
 
 Keine API-Keys werden ans Frontend ausgeliefert.
+
+## Bildgenerierung pro Entität
+
+Jede Entität (Spielercharakter, NSC, Fraktion, Ort, Gegenstand) kann im
+Side-Panel der Graph-Ansicht ein KI-Bild bekommen. Der Button „Bild erstellen"
+ruft `POST /api/images/generate { entityId }` auf. Das Backend:
+
+1. lädt die Entität und ihren `imagePrompt` (Fallback: Beschreibung → Name),
+2. ergänzt einen **typ-spezifischen Stil**:
+   - `player_character` / `npc` → *character illustration*
+   - `location` → *environment illustration*
+   - `item` → *item illustration*
+   - `faction` → *emblem / group illustration*
+3. generiert das Bild über die **OpenAI Images API** (`IMAGE_MODEL`, Default `gpt-image-1`),
+4. speichert es unter `backend/uploads/entities/` (statisch unter `/uploads` ausgeliefert),
+5. schreibt die `imageUrl` auf die Entität.
+
+Abstrakte Typen (`secret`, `event`, `unknown`) unterstützen keine Bildgenerierung.
+
+Konfiguration: `IMAGE_MODEL`, `IMAGE_SIZE`, optional `IMAGE_BASE_URL` / `IMAGE_API_KEY`
+(fallen auf `LLM_BASE_URL` / `LLM_API_KEY` zurück — siehe `.env.example`). Im Docker-Setup
+persistieren die Bilder über das Volume `./backend/uploads`.
 
 ## Testen
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Trash2, X } from 'lucide-react';
-import { api } from '@/lib/api';
+import { ImageIcon, Loader2, Sparkles, Trash2, X } from 'lucide-react';
+import { api, API_BASE } from '@/lib/api';
 import type { Entity, EntityType, Importance, EntityStatus, Visibility } from '@/types/loregraph';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,6 +23,9 @@ const STATUSES: EntityStatus[] = ['active', 'dead', 'missing', 'destroyed', 'unk
 const IMPORTANCES: Importance[] = ['low', 'medium', 'high', 'critical'];
 const VISIBILITIES: Visibility[] = ['public', 'gm_only'];
 
+// Must mirror the backend's supported types (see services/imageGenerator.ts).
+const IMAGE_TYPES: EntityType[] = ['player_character', 'npc', 'faction', 'location', 'item'];
+
 export function EntityPanel({
   entity,
   onClose,
@@ -36,26 +39,51 @@ export function EntityPanel({
 }) {
   const [draft, setDraft] = useState<Entity>(entity);
   const [busy, setBusy] = useState(false);
+  const [imgBusy, setImgBusy] = useState(false);
+  const [imgError, setImgError] = useState<string | null>(null);
 
-  useEffect(() => setDraft(entity), [entity]);
+  useEffect(() => {
+    setDraft(entity);
+    setImgError(null);
+  }, [entity]);
+
+  function editablePayload(): Partial<Entity> {
+    return {
+      name: draft.name,
+      type: draft.type,
+      description: draft.description,
+      visibility: draft.visibility,
+      status: draft.status,
+      importance: draft.importance,
+      confidenceScore: draft.confidenceScore,
+      imagePrompt: draft.imagePrompt,
+      isUncertain: draft.isUncertain,
+    };
+  }
 
   async function save() {
     setBusy(true);
     try {
-      const updated = await api.updateEntity(entity.id, {
-        name: draft.name,
-        type: draft.type,
-        description: draft.description,
-        visibility: draft.visibility,
-        status: draft.status,
-        importance: draft.importance,
-        confidenceScore: draft.confidenceScore,
-        imagePrompt: draft.imagePrompt,
-        isUncertain: draft.isUncertain,
-      });
+      const updated = await api.updateEntity(entity.id, editablePayload());
       onChanged(updated);
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function generateImage() {
+    setImgError(null);
+    setImgBusy(true);
+    try {
+      // Persist pending edits first (especially the image prompt) so the
+      // backend generates from exactly what the user currently sees.
+      await api.updateEntity(entity.id, editablePayload());
+      const updated = await api.generateEntityImage(entity.id);
+      onChanged(updated);
+    } catch (e) {
+      setImgError((e as Error).message);
+    } finally {
+      setImgBusy(false);
     }
   }
 
@@ -69,6 +97,8 @@ export function EntityPanel({
       setBusy(false);
     }
   }
+
+  const supportsImage = IMAGE_TYPES.includes(entity.type);
 
   return (
     <div className="h-full flex flex-col">
@@ -167,6 +197,51 @@ export function EntityPanel({
           <p className="text-[11px] text-muted-foreground">
             Englisch, knapp, für KI-Bildgeneratoren wie Midjourney, SDXL, Flux.
           </p>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Bild</Label>
+          {entity.imageUrl ? (
+            <img
+              src={`${API_BASE}${entity.imageUrl}`}
+              alt={`Generiertes Bild für ${entity.name}`}
+              className="w-full rounded-md border border-border object-cover aspect-square bg-muted/30"
+            />
+          ) : (
+            <div className="w-full rounded-md border border-dashed border-border bg-muted/20 aspect-square flex flex-col items-center justify-center text-muted-foreground gap-2">
+              <ImageIcon className="h-8 w-8 opacity-40" />
+              <span className="text-xs">Noch kein Bild generiert</span>
+            </div>
+          )}
+
+          {supportsImage ? (
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={generateImage}
+              disabled={imgBusy || busy}
+            >
+              {imgBusy ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Generiere Bild…
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4" />
+                  {entity.imageUrl ? 'Bild neu generieren' : 'Bild erstellen'}
+                </>
+              )}
+            </Button>
+          ) : (
+            <p className="text-[11px] text-muted-foreground">
+              Für den Typ „{ENTITY_LABEL[entity.type]}" ist keine Bildgenerierung verfügbar.
+            </p>
+          )}
+
+          {imgError && (
+            <p className="text-xs text-destructive">{imgError}</p>
+          )}
         </div>
 
         {entity.sourceExcerpt && (

@@ -88,6 +88,13 @@ export const api = {
   deleteEntity: (entityId: string) =>
     http<void>(`/api/entities/${entityId}`, { method: 'DELETE' }),
 
+  // Images
+  generateEntityImage: (entityId: string) =>
+    http<Entity>('/api/images/generate', {
+      method: 'POST',
+      body: JSON.stringify({ entityId }),
+    }),
+
   // Relationships
   listRelationships: (campaignId: string) =>
     http<Relationship[]>(`/api/campaigns/${campaignId}/relationships`),

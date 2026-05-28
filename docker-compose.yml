@@ -40,11 +40,19 @@ services:
       LLM_MAX_TOKENS: ${LLM_MAX_TOKENS:-}
       LLM_JSON_MODE: ${LLM_JSON_MODE:-}
       LLM_TIMEOUT_MS: ${LLM_TIMEOUT_MS:-}
+      # Image generation (falls back to LLM_* when unset)
+      IMAGE_MODEL: ${IMAGE_MODEL:-gpt-image-1}
+      IMAGE_SIZE: ${IMAGE_SIZE:-1024x1024}
+      IMAGE_BASE_URL: ${IMAGE_BASE_URL:-}
+      IMAGE_API_KEY: ${IMAGE_API_KEY:-}
+      IMAGE_TIMEOUT_MS: ${IMAGE_TIMEOUT_MS:-}
+      UPLOADS_DIR: /app/uploads
     ports:
       - "${BACKEND_PORT:-4000}:4000"
     volumes:
       - ./backend/src:/app/src
       - ./backend/prisma:/app/prisma
+      - ./backend/uploads:/app/uploads
     command: sh -c "npx prisma generate && npx prisma db push --accept-data-loss && npx prisma db seed && npm run dev"
 
   frontend:

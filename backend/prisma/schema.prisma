@@ -142,6 +142,8 @@ model Entity {
   importance      Importance   @default(medium)
   sourceExcerpt   String?
   imagePrompt     String?
+  imageUrl        String?
+  imageGeneratedAt DateTime?
   isUncertain     Boolean      @default(false)
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
