@@ -1,0 +1,225 @@
+// Prisma schema for LoreGraph
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Enums ----------
+
+enum EntityType {
+  player_character
+  npc
+  faction
+  location
+  item
+  secret
+  event
+  unknown
+}
+
+enum RelationshipType {
+  allied_with
+  hates
+  loves
+  owes
+  manipulates
+  protects
+  hunts
+  works_for
+  betrayed_by
+  related_to
+  controls
+  knows_secret_of
+  competes_with
+  located_in
+  owns
+  involved_in
+  unknown_connection
+}
+
+enum Visibility {
+  public
+  gm_only
+}
+
+enum EntityStatus {
+  active
+  dead
+  missing
+  destroyed
+  unknown
+}
+
+enum RelationshipStatus {
+  stable
+  unstable
+  escalating
+  broken
+  secret
+}
+
+enum Importance {
+  low
+  medium
+  high
+  critical
+}
+
+enum SourceType {
+  lore
+  session_notes
+  adventure
+  character_backstory
+  other
+}
+
+enum PromptType {
+  conflict
+  reveal
+  debt
+  betrayal
+  alliance
+  mystery
+  session_hook
+}
+
+// ---------- Models ----------
+
+model User {
+  id        String   @id @default(cuid())
+  email     String?  @unique
+  name      String?
+  createdAt DateTime @default(now())
+  campaigns Campaign[]
+}
+
+model Campaign {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  system      String?
+  tone        String?
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  sourceTexts      CampaignSourceText[]
+  entities         Entity[]
+  relationships    Relationship[]
+  generatedPrompts GeneratedPrompt[]
+  openQuestions    OpenQuestion[]
+  tags             Tag[]
+}
+
+model CampaignSourceText {
+  id         String     @id @default(cuid())
+  campaignId String
+  campaign   Campaign   @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  title      String?
+  rawText    String
+  sourceType SourceType @default(other)
+  createdAt  DateTime   @default(now())
+
+  @@index([campaignId])
+}
+
+model Entity {
+  id              String       @id @default(cuid())
+  campaignId      String
+  campaign        Campaign     @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  name            String
+  type            EntityType   @default(unknown)
+  description     String?
+  confidenceScore Float        @default(1.0)
+  visibility      Visibility   @default(public)
+  status          EntityStatus @default(active)
+  importance      Importance   @default(medium)
+  sourceExcerpt   String?
+  imagePrompt     String?
+  isUncertain     Boolean      @default(false)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  outgoing  Relationship[] @relation("sourceEntity")
+  incoming  Relationship[] @relation("targetEntity")
+  tags      EntityTag[]
+
+  @@index([campaignId])
+  @@unique([campaignId, name])
+}
+
+model Relationship {
+  id              String             @id @default(cuid())
+  campaignId      String
+  campaign        Campaign           @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  sourceEntityId  String
+  sourceEntity    Entity             @relation("sourceEntity", fields: [sourceEntityId], references: [id], onDelete: Cascade)
+  targetEntityId  String
+  targetEntity    Entity             @relation("targetEntity", fields: [targetEntityId], references: [id], onDelete: Cascade)
+  type            RelationshipType   @default(unknown_connection)
+  description     String?
+  intensity       Int                @default(3)
+  confidenceScore Float              @default(1.0)
+  visibility      Visibility         @default(public)
+  status          RelationshipStatus @default(stable)
+  sourceExcerpt   String?
+  isUncertain     Boolean            @default(false)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  @@index([campaignId])
+  @@index([sourceEntityId])
+  @@index([targetEntityId])
+}
+
+model GeneratedPrompt {
+  id                     String     @id @default(cuid())
+  campaignId             String
+  campaign               Campaign   @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  title                  String
+  description            String
+  type                   PromptType
+  relatedEntityIds       String[]   @default([])
+  relatedRelationshipIds String[]   @default([])
+  createdAt              DateTime   @default(now())
+
+  @@index([campaignId])
+}
+
+model OpenQuestion {
+  id               String   @id @default(cuid())
+  campaignId       String
+  campaign         Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  question         String
+  relatedEntityIds String[] @default([])
+  resolved         Boolean  @default(false)
+  createdAt        DateTime @default(now())
+
+  @@index([campaignId])
+}
+
+model Tag {
+  id         String      @id @default(cuid())
+  name       String
+  campaignId String
+  campaign   Campaign    @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  entities   EntityTag[]
+
+  @@unique([campaignId, name])
+  @@index([campaignId])
+}
+
+model EntityTag {
+  entityId String
+  tagId    String
+  entity   Entity @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  tag      Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([entityId, tagId])
+}
